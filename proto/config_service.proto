@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+package config;
+
+option go_package = ".;pb";
+
+import "config_message.proto";
+
+service ConfigService {
+  rpc GetWorkerConfig(GetWorkerConfigRequest) returns (WorkerConfigResponse) {};
+  rpc UpdateWorkerConfig(UpdateWorkerConfigRequest) returns (WorkerConfigResponse) {};
+}
