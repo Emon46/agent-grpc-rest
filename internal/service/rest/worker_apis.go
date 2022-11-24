@@ -4,7 +4,7 @@ import (
 	"context"
 	"github.com/gin-gonic/gin"
 	"gopkg.in/yaml.v3"
-	core_v1 "k8s.io/api/core/v1"
+
 	meta_v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"net/http"
 	"observo/agent-grpc/internal/lib"
@@ -13,11 +13,6 @@ import (
 type ConfigMapMeta struct {
 	ConfigMapName      string `json:"configMapName" binding:"required"`
 	ConfigMapNamespace string `json:"configMapNamespace" binding:"required"`
-}
-type Config struct {
-	Sources    map[string]interface{} `json:"sources"`
-	Transforms map[string]interface{} `json:"transforms"`
-	Sinks      map[string]interface{} `json:"sinks"`
 }
 
 type getWorkerConfigRequest struct {
@@ -48,8 +43,8 @@ func (server *Server) GetWorkerConfig(ctx *gin.Context) {
 }
 
 type updateWorkerConfigRequest struct {
-	ConfigMapMeta ConfigMapMeta `json:"configMapMeta" binding:"required"`
-	Config        Config        `json:"config"`
+	ConfigMapMeta ConfigMapMeta    `json:"configMapMeta" binding:"required"`
+	Config        lib.WorkerConfig `json:"config"`
 }
 
 func (server *Server) UpdateWorkerConfig(ctx *gin.Context) {
@@ -66,7 +61,7 @@ func (server *Server) UpdateWorkerConfig(ctx *gin.Context) {
 		return
 	}
 
-	workerConfig, err := UpsertWorkerConfig(configMap, req.Config)
+	workerConfig, err := lib.UpsertWorkerConfig(configMap, &req.Config)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
@@ -79,32 +74,4 @@ func (server *Server) UpdateWorkerConfig(ctx *gin.Context) {
 	}
 
 	ctx.JSON(http.StatusOK, workerConfig)
-}
-
-func UpsertWorkerConfig(configMap *core_v1.ConfigMap, reqConfig Config) (map[string]interface{}, error) {
-	workerConfig := make(map[string]interface{})
-	err := yaml.Unmarshal([]byte(configMap.Data[lib.WorkerConfigFileName]), &workerConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	// add new source configs
-	if reqConfig.Sources != nil {
-		workerConfig[lib.WorkerConfigSourcesStr] = lib.UpsertTypeSpecificWorkerConfig(workerConfig[lib.WorkerConfigSourcesStr].(map[string]interface{}),
-			reqConfig.Sources)
-	}
-
-	// add new transforms configs
-	if reqConfig.Transforms != nil {
-		workerConfig[lib.WorkerConfigTransformsStr] = lib.UpsertTypeSpecificWorkerConfig(workerConfig[lib.WorkerConfigTransformsStr].(map[string]interface{}),
-			reqConfig.Transforms)
-	}
-
-	// add new sinks configs
-	if reqConfig.Sinks != nil {
-		workerConfig[lib.WorkerConfigSinksStr] = lib.UpsertTypeSpecificWorkerConfig(workerConfig[lib.WorkerConfigSinksStr].(map[string]interface{}),
-			reqConfig.Sinks)
-	}
-
-	return workerConfig, nil
 }

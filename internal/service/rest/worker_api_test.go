@@ -189,7 +189,7 @@ func TestServerUpdateWorkerConfig(t *testing.T) {
 					ConfigMapName:      configMapName,
 					ConfigMapNamespace: configMapNamespace,
 				},
-				"config": Config{
+				"config": &lib.WorkerConfig{
 					Transforms: transformConfigs,
 				},
 			},
